@@ -179,6 +179,14 @@ dialog[open]{animation:up .28s cubic-bezier(.2,.9,.3,1)}
 dialog::backdrop{background:rgba(0,0,0,.65);backdrop-filter:blur(3px)}
 .grab{width:42px;height:5px;border-radius:5px;background:var(--line2);margin:0 auto 12px}
 dialog h3{margin:0 0 4px;font:800 26px/1.1 var(--num);letter-spacing:.4px}
+.iconbtn{position:relative}
+#btnUpd.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#updDot{position:absolute;top:7px;right:7px;width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 2px var(--bg)}
+.updbar{position:fixed;left:12px;right:12px;bottom:calc(96px + env(safe-area-inset-bottom));max-width:560px;margin:0 auto;z-index:40;display:flex;align-items:center;gap:10px;padding:12px 12px 12px 16px;border-radius:16px;background:#16241d;border:1px solid rgba(47,211,137,.45);box-shadow:0 14px 30px -10px rgba(0,0,0,.8);animation:up .3s ease}
+.updbar div{flex:1;font-size:13px}.updbar b{color:var(--ok)}
+.updbar button{border:0;border-radius:11px;padding:9px 14px;font-weight:700;font-size:13px;background:var(--ok);color:#07140d}
+.updbar .x{background:none;color:var(--mut);padding:6px}
 .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(10px);background:#fff;color:#111;padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;transition:.25s;pointer-events:none;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 .toast.on{opacity:1;transform:translateX(-50%)}
 .chart{width:100%;height:auto;display:block;margin-top:6px}
@@ -277,6 +285,7 @@ textarea{resize:vertical;font-size:14px;line-height:1.45;margin-top:10px}
     <div class="mk"><svg viewBox="0 0 24 24"><path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/></svg></div>
     <div><h1>Cargas</h1><small id="hdrSub">Tus RM, siempre a mano</small></div>
   </div>
+  <button class="iconbtn" id="btnUpd" aria-label="Actualizar"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></svg><i id="updDot" class="hide"></i></button>
   <button class="iconbtn" id="btnSettings" aria-label="Ajustes"><svg viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></button>
 </header>
 
@@ -502,6 +511,8 @@ textarea{resize:vertical;font-size:14px;line-height:1.45;margin-top:10px}
   <div class="seg" id="segLb"><button data-v="1">Sí</button><button data-v="0">No</button></div>
   <label>Discos disponibles por lado (kg, separados por espacios)</label>
   <input id="platesInp" inputmode="decimal">
+  <label>Versión de la app</label>
+  <div class="row" style="align-items:center"><div class="mut" id="verTxt" style="font-size:14px"></div><button class="btn sm sec" id="btnUpd2" style="flex:0 0 auto">Buscar actualización</button></div>
   <label>Copia de seguridad</label>
   <div class="row">
     <button class="btn sec" id="btnExport" style="margin-top:0">Exportar</button>
@@ -529,9 +540,35 @@ textarea{resize:vertical;font-size:14px;line-height:1.45;margin-top:10px}
   <button class="btn sec" onclick="this.closest('dialog').close()">Cerrar</button>
 </dialog>
 
+<div class="updbar hide" id="updBar"><div><b>Hay una versión nueva</b><br><span class="mut" id="updTxt">Tus datos se mantienen.</span></div><button id="updGo">Actualizar</button><button class="x" id="updX">✕</button></div>
 <div class="toast" id="toast"></div>
 
 <script>
+/* ================= VERSIÓN Y ACTUALIZACIONES ================= */
+const APP_VERSION='2026.11.04-3';
+let newVersion=null;
+async function checkUpdate(manual){
+  const b=$('#btnUpd');if(manual)b.classList.add('spin');
+  try{
+    const r=await fetch('./index.html?v='+Date.now(),{cache:'no-store'});
+    const m=(await r.text()).match(/APP_VERSION='([^']+)'/);
+    const remote=m&&m[1];
+    if(remote&&remote!==APP_VERSION){newVersion=remote;$('#updDot').classList.remove('hide');$('#updTxt').textContent=`Versión ${remote} · tus datos se mantienen.`;$('#updBar').classList.remove('hide');}
+    else if(manual){
+      if(confirm('Ya tienes la última versión ('+APP_VERSION+').\n¿Recargar la app igualmente?'))return doUpdate();
+    }
+  }catch(e){if(manual)toast('Sin conexión: no se puede comprobar');}
+  finally{b.classList.remove('spin');}
+}
+async function doUpdate(){
+  $('#btnUpd').classList.add('spin');toast('Actualizando…');
+  try{
+    if('caches' in window){const k=await caches.keys();await Promise.all(k.map(x=>caches.delete(x)));}
+    if('serviceWorker' in navigator){const reg=await navigator.serviceWorker.getRegistration();if(reg){await reg.update().catch(()=>{});if(reg.waiting)reg.waiting.postMessage('skip');}}
+  }catch(e){}
+  setTimeout(()=>location.replace(location.pathname+'?u='+Date.now()),400);
+}
+
 /* ================= DATOS ================= */
 const KEY='cargas.v1';
 const DEFAULT_LIFTS=['Back squat','Front squat','Overhead squat','Deadlift','Clean','Power clean','Squat clean','Hang clean','Clean & jerk','Snatch','Power snatch','Hang snatch','Strict press','Push press','Push jerk','Split jerk','Thruster','Bench press'];
@@ -1207,7 +1244,7 @@ $('#hFile').onchange=async e=>{
 
 /* ================= AJUSTES ================= */
 function renderSet(){
-  const st=S.settings;
+  const st=S.settings;$('#verTxt').textContent='v'+APP_VERSION;
   seg('#segBar',()=>st.bar,v=>{st.bar=+v;save();refresh();});
   seg('#segStep',()=>st.step,v=>{st.step=+v;save();refresh();});
   seg('#segMode',()=>st.mode,v=>{st.mode=v;save();refresh();});
@@ -1237,10 +1274,17 @@ $('#fileImp').onchange=async e=>{
 function refresh(){const v=$('nav button.on').dataset.v;({hoy:renderHoy,calc:renderCalc,rm:renderRM,wod:renderWods,log:renderLog})[v]();}
 (()=>{
   const q=new URLSearchParams(location.search),t=q.get('wod')||q.get('text');
+  if(q.get('u')){history.replaceState(null,'',location.pathname);setTimeout(()=>toast('App actualizada a la v'+APP_VERSION),600);}
   S.ui.day=today();
   if(t){pendingText=t;if(sessOf(S.ui.day))hoyEdit=true;history.replaceState(null,'',location.pathname);}
 })();
 renderHoy();
+$('#btnUpd').onclick=()=>newVersion?doUpdate():checkUpdate(true);
+$('#btnUpd2').onclick=()=>{$('#dlgSet').close();checkUpdate(true);};
+$('#updGo').onclick=doUpdate;
+$('#updX').onclick=()=>$('#updBar').classList.add('hide');
+setTimeout(()=>checkUpdate(false),1500);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkUpdate(false);});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
