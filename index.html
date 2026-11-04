@@ -193,6 +193,31 @@ code{background:var(--card2);padding:1px 6px;border-radius:6px;font-size:12px}
 /* ===== HOY ===== */
 .mon{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--mut);margin:2px 2px 8px}
 .mon button{background:none;border:0;color:var(--acc2);font-size:12px;font-weight:700;padding:0}
+.mon .mb{color:var(--txt);font-size:14px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.mon .mb svg{width:16px;height:16px;stroke:var(--acc2);fill:none;stroke-width:2.2;stroke-linecap:round}
+.mon .rt{display:flex;gap:14px}
+.calh{display:flex;align-items:center;justify-content:space-between;margin:6px 0 10px}
+.calh b{font:800 24px var(--num)}
+.calh button{width:40px;height:40px;border-radius:12px;border:1px solid var(--line2);background:var(--card2);font-size:20px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal .wd{font-size:10px;color:var(--mut);text-align:center;font-weight:700;padding-bottom:2px}
+.cal button{position:relative;aspect-ratio:1;border-radius:12px;border:1px solid var(--line);background:var(--card2);font:700 17px var(--num)}
+.cal button.out{opacity:.3}
+.cal button.td{border-color:var(--acc2);color:var(--acc2)}
+.cal button.on{background:var(--grad);color:#fff;border-color:transparent}
+.cal button i{position:absolute;left:50%;bottom:5px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--acc2)}
+.cal button i.ok{background:var(--ok)}
+.cal button.on i{background:#fff}
+.sl{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:11px 12px;border-radius:14px;background:var(--card2);border:1px solid var(--line);margin-bottom:7px}
+.sl .dd{width:44px;flex:0 0 auto;text-align:center}
+.sl .dd b{display:block;font:800 22px/1 var(--num)}
+.sl .dd span{font-size:10px;color:var(--mut);text-transform:uppercase;font-weight:700}
+.sl .bd{flex:1;min-width:0}
+.sl .bd .t{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl .bd .p{font-size:11px;color:var(--mut);margin-top:2px}
+.sl.fut{border-style:dashed}
+.sl.cur{border-color:var(--acc)}
+.sgrp{font-size:11px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin:16px 2px 8px}
 .week{display:flex;gap:4px;align-items:center}
 .week .ar{width:26px;height:56px;border:0;background:none;color:var(--mut);font-size:22px;padding:0;flex:0 0 auto}
 .days{flex:1;display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
@@ -258,7 +283,7 @@ textarea{resize:vertical;font-size:14px;line-height:1.45;margin-top:10px}
 <main>
 <!-- ================= HOY ================= -->
 <section id="v-hoy">
-  <div class="mon"><span id="hMon"></span><button id="hToday">Hoy</button></div>
+  <div class="mon"><button class="mb" id="hMonB"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span id="hMon"></span> ▾</button><div class="rt"><button id="hToday">Hoy</button><button id="hAll">Todos</button></div></div>
   <div class="week"><button class="ar" id="hPrev">‹</button><div class="days" id="hDays"></div><button class="ar" id="hNext">›</button></div>
 
   <div id="hLoad" class="card">
@@ -485,6 +510,23 @@ textarea{resize:vertical;font-size:14px;line-height:1.45;margin-top:10px}
   <input type="file" id="fileImp" accept="application/json" class="hide">
   <p class="mut">Los datos se guardan solo en este dispositivo (localStorage, clave <code>cargas.v1</code>).</p>
   <button class="btn" onclick="this.closest('dialog').close()">Listo</button>
+</dialog>
+
+<dialog id="dlgCal">
+  <div class="grab"></div>
+  <div class="calh"><button id="cPrev">‹</button><b id="cMon"></b><button id="cNext">›</button></div>
+  <div class="cal" id="cGrid"></div>
+  <div class="legend" style="margin-top:10px"><span><i style="background:#ff7a1a"></i>Entreno cargado</span><span><i style="background:#2fd389"></i>Completado</span></div>
+  <div id="cList"></div>
+  <button class="btn sec" onclick="this.closest('dialog').close()">Cerrar</button>
+</dialog>
+
+<dialog id="dlgAll">
+  <div class="grab"></div>
+  <h3>Todos tus entrenos</h3>
+  <div class="mut" id="aSub"></div>
+  <div id="aList"></div>
+  <button class="btn sec" onclick="this.closest('dialog').close()">Cerrar</button>
 </dialog>
 
 <div class="toast" id="toast"></div>
@@ -984,10 +1026,10 @@ function renderHoy(){
   const d=S.ui.day||today();S.ui.day=d;
   const base=new Date(d+'T12:00'),mon=new Date(base);mon.setDate(base.getDate()-(base.getDay()+6)%7);
   $('#hMon').textContent=cap(base.toLocaleDateString('es-ES',{month:'long',year:'numeric'}));
-  $('#hToday').classList.toggle('hide',d===today());
+  $('#hToday').classList.toggle('hide',d===today());$('#hAll').classList.toggle('hide',!S.sessions.length);
   const L='LMXJVSD';let h='';
   for(let i=0;i<7;i++){const x=new Date(mon);x.setDate(mon.getDate()+i);const iso=isoD(x);
-    h+=`<button class="dy ${iso===d?'on':''} ${iso===today()?'td':''}" data-d="${iso}"><span>${L[i]}</span><b>${x.getDate()}</b>${sessOf(iso)?'<i></i>':''}</button>`;}
+    h+=`<button class="dy ${iso===d?'on':''} ${iso===today()?'td':''}" data-d="${iso}"><span>${L[i]}</span><b>${x.getDate()}</b>${(()=>{const ss=sessOf(iso);if(!ss)return '';const p=sessProg(ss);return `<i style="${p.tot&&p.done>=p.tot?'background:var(--ok)':''}"></i>`;})()}</button>`;}
   $('#hDays').innerHTML=h;
   $$('#hDays .dy').forEach(b=>b.onclick=()=>{S.ui.day=b.dataset.d;hoyEdit=false;save();renderHoy();});
   const s=sessOf(d),showLoad=!s||hoyEdit;
@@ -1010,8 +1052,7 @@ function blockLetter(b){
 }
 function lineDone(s,bi,li){return S.log.filter(e=>e.src===`${s.id}:${bi}:${li}`);}
 function sessHTML(s){
-  let tot=0,done=0;
-  s.blocks.forEach((b,bi)=>{b.lines.forEach((ln,li)=>{if(ln.kind==='lift'){tot++;if(lineDone(s,bi,li).length)done++;}});if(b.meta.score){tot++;if(b.result)done++;}});
+  const {tot,done}=sessProg(s);
   let h=`<div class="card" style="padding:14px 16px"><div class="shd"><div><div class="dt">${cap(dLong(s.date))}</div><div class="pg">${tot?`${done} de ${tot} hechos`:'Entreno cargado'}</div></div>
     <div style="display:flex;gap:6px"><button class="iconbtn" id="sEdit" aria-label="Editar"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></button><button class="iconbtn" id="sDel" aria-label="Borrar"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg></button></div></div>
     ${tot?`<div class="prog"><i style="width:${Math.round(done/tot*100)}%"></i></div>`:''}</div>`;
@@ -1081,6 +1122,58 @@ function bindSess(s){
 $('#hPrev').onclick=()=>{const x=new Date(S.ui.day+'T12:00');x.setDate(x.getDate()-7);S.ui.day=isoD(x);hoyEdit=false;renderHoy();};
 $('#hNext').onclick=()=>{const x=new Date(S.ui.day+'T12:00');x.setDate(x.getDate()+7);S.ui.day=isoD(x);hoyEdit=false;renderHoy();};
 $('#hToday').onclick=()=>{S.ui.day=today();hoyEdit=false;renderHoy();};
+/* ---- progreso de un entreno ---- */
+function sessProg(s){let tot=0,done=0;
+  s.blocks.forEach((b,bi)=>{b.lines.forEach((ln,li)=>{if(ln.kind==='lift'){tot++;if(lineDone(s,bi,li).length)done++;}});if(b.meta.score){tot++;if(b.result)done++;}});
+  return{tot,done};}
+function sessTitle(s){return s.blocks.filter(b=>!b.meta.wu).map(b=>blockLetter(b).t).join(' · ')||s.blocks.map(b=>b.title).join(' · ');}
+function sessRow(s){
+  const d=new Date(s.date+'T12:00'),p=sessProg(s),fut=s.date>today();
+  const lifts=[...new Set(s.blocks.flatMap(b=>b.lines.filter(l=>l.kind==='lift').map(l=>l.lift)))];
+  const st=fut?'Pendiente':p.tot?(p.done>=p.tot?'✓ Completado':`${p.done}/${p.tot} hechos`):'Cargado';
+  return `<button class="sl ${fut?'fut':''} ${s.date===S.ui.day?'cur':''}" data-go="${s.date}"><div class="dd"><span>${d.toLocaleDateString('es-ES',{weekday:'short'}).replace('.','')}</span><b>${d.getDate()}</b><span>${d.toLocaleDateString('es-ES',{month:'short'}).replace('.','')}</span></div>
+    <div class="bd"><div class="t">${esc(sessTitle(s))}</div><div class="p">${lifts.length?esc(lifts.join(', '))+' · ':''}<span style="color:${p.tot&&p.done>=p.tot?'var(--ok)':'inherit'}">${st}</span></div></div></button>`;
+}
+function bindGo(root,dlg){$$('[data-go]',root).forEach(b=>b.onclick=()=>{S.ui.day=b.dataset.go;hoyEdit=false;save();$(dlg).close();show('hoy');});}
+/* ---- calendario mensual ---- */
+let calM=null;
+function renderCal(){
+  const y=calM.getFullYear(),m=calM.getMonth();
+  $('#cMon').textContent=cap(calM.toLocaleDateString('es-ES',{month:'long',year:'numeric'}));
+  const first=new Date(y,m,1,12),start=new Date(first);start.setDate(1-(first.getDay()+6)%7);
+  let h='LMXJVSD'.split('').map(x=>`<div class="wd">${x}</div>`).join('');
+  for(let i=0;i<42;i++){const x=new Date(start);x.setDate(start.getDate()+i);const iso=isoD(x),s=sessOf(iso);
+    if(i>=35&&x.getMonth()!==m)break;
+    let dot='';if(s){const p=sessProg(s);dot=`<i class="${p.tot&&p.done>=p.tot?'ok':''}"></i>`;}
+    h+=`<button class="${x.getMonth()!==m?'out':''} ${iso===today()?'td':''} ${iso===S.ui.day?'on':''}" data-go="${iso}">${x.getDate()}${dot}</button>`;}
+  $('#cGrid').innerHTML=h;
+  const ym=`${y}-${String(m+1).padStart(2,'0')}`;
+  const ss=S.sessions.filter(s=>s.date.startsWith(ym)).sort((a,b)=>a.date.localeCompare(b.date));
+  $('#cList').innerHTML=ss.length?`<div class="sgrp">Entrenos de este mes (${ss.length})</div>`+ss.map(sessRow).join(''):`<div class="mut" style="margin-top:14px;text-align:center">No hay entrenos cargados este mes. Toca un día para cargarlo.</div>`;
+  bindGo($('#dlgCal'),'#dlgCal');
+}
+$('#hMonB').onclick=()=>{const d=new Date(S.ui.day+'T12:00');calM=new Date(d.getFullYear(),d.getMonth(),1,12);renderCal();sheet('#dlgCal');};
+$('#cPrev').onclick=()=>{calM.setMonth(calM.getMonth()-1);renderCal();};
+$('#cNext').onclick=()=>{calM.setMonth(calM.getMonth()+1);renderCal();};
+/* ---- listado completo ---- */
+$('#hAll').onclick=()=>{
+  const t=today(),all=[...S.sessions];
+  const fut=all.filter(s=>s.date>t).sort((a,b)=>a.date.localeCompare(b.date));
+  const hoy=all.filter(s=>s.date===t);
+  const past=all.filter(s=>s.date<t).sort((a,b)=>b.date.localeCompare(a.date));
+  $('#aSub').textContent=all.length?`${all.length} entreno${all.length>1?'s':''} cargado${all.length>1?'s':''}`:'';
+  $('#aList').innerHTML=!all.length?'<div class="empty">Todavía no has cargado ningún entreno.</div>':
+    (fut.length?`<div class="sgrp">Próximos</div>${fut.map(sessRow).join('')}`:'')+
+    (hoy.length?`<div class="sgrp">Hoy</div>${hoy.map(sessRow).join('')}`:'')+
+    (past.length?`<div class="sgrp">Anteriores</div>${past.map(sessRow).join('')}`:'');
+  bindGo($('#dlgAll'),'#dlgAll');sheet('#dlgAll');
+};
+/* ---- deslizar la semana ---- */
+(()=>{let x0=null,y0=null;const el=$('.week');
+  el.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY;},{passive:true});
+  el.addEventListener('touchend',e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;x0=null;
+    if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5)(dx<0?$('#hNext'):$('#hPrev')).click();},{passive:true});
+})();
 $('#hCancelEdit').onclick=()=>{hoyEdit=false;renderHoy();};
 $('#hPaste').onclick=async()=>{
   try{const t=await navigator.clipboard.readText();if(!t||!t.trim())return toast('El portapapeles está vacío');$('#hTxt').value=t;toast('Pegado');}
