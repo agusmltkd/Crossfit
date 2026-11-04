@@ -299,6 +299,22 @@ dialog h3{margin:0 0 4px;font:800 32px/1.05 var(--num)}
 .lift2 .tr i{display:block;height:100%;background:var(--chalk);border-radius:3px}
 /* hoy: cabecera más rica */
 .hdrsum{font-size:12px;color:var(--mut)}
+/* exportar / reloj */
+.exp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.exp button{display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 4px 10px;border-radius:var(--r-ctl);border:1px solid var(--line2);background:var(--s2);font-size:12px;font-weight:600;color:var(--chalk)}
+.exp button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.exp button.main{background:var(--chalk);color:#14171b;border-color:var(--chalk)}
+.allok{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:10px;padding:11px;border-radius:var(--r-ctl);border:1px dashed var(--line2);background:none;color:var(--mut);font-size:13px;font-weight:600}
+.allok svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+.steps{counter-reset:st;margin:10px 0 0;padding:0;list-style:none}
+.steps li{counter-increment:st;position:relative;padding:0 0 14px 40px;font-size:14px;line-height:1.5;color:#c9cfd8}
+.steps li:before{content:counter(st);position:absolute;left:0;top:-2px;width:28px;height:28px;border-radius:50%;background:var(--s3);color:var(--chalk);display:grid;place-items:center;font:800 16px var(--num)}
+.steps b{color:var(--chalk)}
+.steps code{font-size:12px}
+.prev{white-space:pre-wrap;background:var(--s2);border:1px solid var(--line);border-radius:var(--r-ctl);padding:12px;font-size:13px;line-height:1.55;color:#c9cfd8;margin-top:10px;max-height:220px;overflow:auto}
+.primg{display:block;width:100%;max-width:300px;margin:6px auto 0;border-radius:16px;border:1px solid var(--line2);aspect-ratio:9/16;background:var(--s2);object-fit:cover}
+.shbtn{background:none;border:0;color:var(--mut);padding:6px;margin-left:4px}
+.shbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 /* disco que gira con el % */
 #plateRot{transition:transform .45s cubic-bezier(.3,1.4,.5,1);transform-origin:60px 60px}
 /* ---------- hoy ---------- */
@@ -577,7 +593,8 @@ textarea{resize:vertical;font-size:14px;line-height:1.5;margin-top:10px}
   <div class="rmtable" id="dlReps"></div>
   <label>Últimas series</label>
   <div id="dlLast"></div>
-  <div class="row" style="margin-top:8px">
+  <button class="btn" id="dlShare" style="margin-top:16px"><svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Compartir mi RM</button>
+  <div class="row">
     <button class="btn sec" id="dlUse">Calcular con este</button>
     <button class="btn sec danger" id="dlDel">Borrar ejercicio</button>
   </div>
@@ -639,6 +656,8 @@ textarea{resize:vertical;font-size:14px;line-height:1.5;margin-top:10px}
   <div class="seg" id="segLb"><button data-v="1">Sí</button><button data-v="0">No</button></div>
   <label>Discos disponibles por lado (kg, separados por espacios)</label>
   <input id="platesInp" inputmode="decimal">
+  <label>Nombre del atajo del reloj</label>
+  <input id="scName" placeholder="Cargas al reloj">
   <label>Versión de la app</label>
   <div class="row" style="align-items:center"><div class="mut" id="verTxt" style="font-size:14px"></div><button class="btn sm sec" id="btnUpd2" style="flex:0 0 auto">Buscar actualización</button></div>
   <label>Copia de seguridad</label>
@@ -668,12 +687,41 @@ textarea{resize:vertical;font-size:14px;line-height:1.5;margin-top:10px}
   <button class="btn sec" onclick="this.closest('dialog').close()">Cerrar</button>
 </dialog>
 
+<dialog id="dlgPr">
+  <div class="grab"></div>
+  <h3 id="prT">Nuevo RM</h3>
+  <div class="mut" id="prS"></div>
+  <img class="primg" id="prImg" alt="Imagen del nuevo RM para compartir">
+  <div class="row">
+    <button class="btn" id="prShare"><svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>Compartir</button>
+    <button class="btn sec" id="prSave">Guardar imagen</button>
+  </div>
+  <button class="btn sec" onclick="this.closest('dialog').close()">Ahora no</button>
+</dialog>
+
+<dialog id="dlgWatch">
+  <div class="grab"></div>
+  <h3>Cargas en el reloj</h3>
+  <div class="mut">Se crea un recordatorio por cada carga en la lista <b style="color:var(--chalk)">Box</b> de la app Recordatorios, que aparece sola en el Apple Watch. Tienes que configurarlo una sola vez:</div>
+  <ol class="steps">
+    <li>Abre <b>Atajos</b> en el iPhone y crea uno nuevo con el <b>+</b>. Llámalo exactamente <b id="wName">Cargas al reloj</b>.</li>
+    <li>Añade la acción <b>Dividir texto</b>. Toca «Texto» y elige <b>Entrada del atajo</b>. Deja «Nuevas líneas».</li>
+    <li>Añade <b>Repetir con cada</b> (se aplica al texto dividido).</li>
+    <li>Dentro del bucle, añade <b>Añadir recordatorio nuevo</b>. Pon como título <b>Elemento de repetición</b> y como lista <b>Box</b> (créala en Recordatorios si no existe).</li>
+    <li>En el ⓘ del atajo, activa <b>Mostrar en la hoja de compartir</b> por si quieres usarlo desde otras apps.</li>
+  </ol>
+  <div class="mut">Esto es lo que se enviará:</div>
+  <div class="prev" id="wPrev"></div>
+  <button class="btn" id="wGo"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l1-3h4l1 3M9 18l1 3h4l1-3"/></svg>Ya lo tengo, enviar al reloj</button>
+  <button class="btn sec" onclick="this.closest('dialog').close()">Cancelar</button>
+</dialog>
+
 <div class="updbar hide" id="updBar"><div><b>Hay una versión nueva</b><br><span class="mut" id="updTxt">Tus datos se mantienen.</span></div><button id="updGo">Actualizar</button><button class="x" id="updX">✕</button></div>
 <div class="toast" id="toast"></div>
 
 <script>
 /* ================= VERSIÓN Y ACTUALIZACIONES ================= */
-const APP_VERSION='2026.11.04-5';
+const APP_VERSION='2026.11.04-6';
 let newVersion=null;
 async function checkUpdate(manual){
   const b=$('#btnUpd');if(manual)b.classList.add('spin');
@@ -935,12 +983,14 @@ function liftChart(l){
     <div class="legend"><span><i style="background:#eef1f4"></i>RM</span><span><i style="background:#2e6fe8"></i>1RM estimado de tus series</span></div>`;
 }
 $('#dlSaveRm').onclick=()=>{const v=num($('#dlRm').value);setRM(curLift,v&&v>0?v:null);$('#dlgLift').close();refresh();};
+$('#dlShare').onclick=()=>{const l=lift(curLift);if(!l||!l.rm)return toast('Primero pon el RM');const h=l.history,pv=h.length>1?h[h.length-2].rm:null;$('#dlgLift').close();offerPr(l.name,l.rm,pv&&pv<l.rm?pv:null,h.length?h[h.length-1].date:null);};
 $('#dlUse').onclick=()=>{S.ui.lift=curLift;save();$('#dlgLift').close();show('calc');};
 $('#dlDel').onclick=()=>{const l=lift(curLift);if(!confirm(`¿Borrar ${l.name}? Lo apuntado en el historial se mantiene.`))return;S.lifts=S.lifts.filter(x=>x.id!==curLift);save();$('#dlgLift').close();refresh();};
 function setRM(id,v){
   const l=lift(id);if(!l)return;const old=l.rm;l.rm=v;
   if(v&&v!==old)l.history.push({date:new Date().toISOString(),rm:v});
   save();toast(v?(old&&v>old?`🔥 Nuevo RM en ${l.name}: ${fmt(v)} kg`:`RM ${l.name}: ${fmt(v)} kg`):'RM borrado');
+  if(v&&old&&v>old)setTimeout(()=>offerPr(l.name,v,old),700);
 }
 $('#btnAddLift').onclick=()=>{$('#addName').value='';$('#addRm').value='';sheet('#dlgAdd');setTimeout(()=>$('#addName').focus(),100);};
 $('#addSave').onclick=()=>{
@@ -1233,7 +1283,15 @@ function sessHTML(s){
   const {tot,done}=sessProg(s);
   let h=`<div class="card" style="padding:14px 16px"><div class="shd"><div><div class="dt">${cap(dLong(s.date))}</div><div class="pg">${tot?`${done} de ${tot} hechos`:'Entreno cargado'}</div></div>
     <div style="display:flex;gap:6px"><button class="iconbtn" id="sEdit" aria-label="Editar"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></button><button class="iconbtn" id="sDel" aria-label="Borrar"><svg viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg></button></div></div>
-    ${tot?`<div class="prog">${Array.from({length:tot},(_,i)=>`<i class="${i<done?'on':''}"></i>`).join('')}</div>`:''}</div>`;
+    ${tot?`<div class="prog">${Array.from({length:tot},(_,i)=>`<i class="${i<done?'on':''}"></i>`).join('')}</div>`:''}
+    <div class="exp">
+      <button class="main" id="xWatch"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l1-3h4l1 3M9 18l1 3h4l1-3M12 10v2l1.5 1"/></svg>Al reloj</button>
+      <button id="xCal"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Calendario</button>
+      <button id="xCopy"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>Copiar</button>
+    </div>
+    ${(()=>{let pend=0;s.blocks.forEach((b,bi)=>b.lines.forEach((ln,li)=>{if(ln.kind==='lift'&&!lineDone(s,bi,li).length&&(liftByName(ln.lift,false)||{}).rm)pend++;}));
+      return pend&&s.date<=today()?`<button class="allok" id="xAll"><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>Todo según lo previsto (${pend})</button>`:'';})()}
+    </div>`;
   s.blocks.forEach((b,bi)=>{
     const bl=blockLetter(b);
     h+=`<div class="card blk"><div class="bh"><div class="bl ${bl.wu?'wu':''}">${esc(bl.l)}</div><div><div class="bt">${esc(bl.t)}</div>${(()=>{const k=x=>strip(x).replace(/[^a-z0-9]/g,''),tg=b.meta.tags.filter(t=>!k(bl.t).includes(k(t)));return tg.length?`<div class="tags">${tg.map((t,i)=>`<span class="tg ${i===0?'o':''}">${esc(t)}</span>`).join('')}</div>`:'';})()}</div></div><div class="bb">`;
@@ -1254,7 +1312,7 @@ function sessHTML(s){
             <div class="lw">${fmt(w1)}${w2?'–'+fmt(w2):''}<small> kg</small></div>
             <div class="lsub">${(ln.sets>1?ln.sets+' × ':'')+ln.reps} rep${ln.reps>1?'s':''} · ${sub}</div>
             ${last?`<div class="lsub" style="color:var(--ok)">✓ ${last.sets>1?last.sets+'×':''}${last.reps} @ ${fmt(last.weight)} kg${last.rpe?' · RPE '+last.rpe:''}</div>`:''}</div>
-            <button class="ck" data-lg="${bi}:${li}">${dn.length?'✓ Hecho':'Apuntar'}</button></div>`;
+            <button class="ck" data-lg="${bi}:${li}">${dn.length?'✓ Editar':'Apuntar'}</button></div>`;
         }else{
           h+=`<div class="lpill" style="margin-top:8px;--z:${zc(ln.b||ln.a)}">${esc(ln.lift)} · ${fmt(ln.a,1)}${ln.b?'–'+fmt(ln.b,1):''}%</div>
             <div class="rmq"><input type="number" inputmode="decimal" step="0.5" placeholder="Tu RM de ${esc(ln.lift)} (kg)" data-rmq="${esc(ln.lift)}"><button data-rmqs="${esc(ln.lift)}">OK</button></div>`;
@@ -1275,12 +1333,24 @@ function sessHTML(s){
 }
 function bindSess(s){
   $('#sEdit').onclick=()=>{hoyEdit=true;renderHoy();};
+  $('#xWatch').onclick=()=>watchSend(s);
+  $('#xCal').onclick=()=>calExport(s);
+  $('#xCopy').onclick=()=>copyCheat(s);
+  if($('#xAll'))$('#xAll').onclick=()=>{
+    let n=0;
+    s.blocks.forEach((b,bi)=>b.lines.forEach((ln,li)=>{
+      if(ln.kind!=='lift'||lineDone(s,bi,li).length)return;const l=liftByName(ln.lift,false);if(!l||!l.rm)return;
+      S.log.push({id:uid(),ts:Date.now()+n,date:s.date,liftId:l.id,liftName:l.name,pct:ln.a,weight:roundW(l.rm*ln.a/100),sets:ln.sets,reps:ln.reps,rpe:null,note:blockLetter(b).t,src:`${s.id}:${bi}:${li}`});n++;
+    }));
+    save();renderHoy();toast(`${n} series apuntadas · toca «Editar» en las que cambiaste`);
+  };
   $('#sDel').onclick=()=>{if(!confirm('¿Borrar el entreno de este día? Las series que apuntaste se quedan en el historial.'))return;S.sessions=S.sessions.filter(x=>x.id!==s.id);save();renderHoy();};
   $$('#hSess [data-lg]').forEach(b=>b.onclick=()=>{
     const [bi,li]=b.dataset.lg.split(':').map(Number),ln=s.blocks[bi].lines[li],l=liftByName(ln.lift,true);
     const dn=lineDone(s,bi,li);
+    if(dn.length)return openLog(dn[dn.length-1]);
     openLog({liftId:l.id,pct:ln.a,weight:roundW(l.rm*ln.a/100),reps:ln.reps,sets:ln.sets,date:s.date,
-      note:blockLetter(s.blocks[bi]).t+(dn.length?' (otra)':''),src:`${s.id}:${bi}:${li}`});
+      note:blockLetter(s.blocks[bi]).t,src:`${s.id}:${bi}:${li}`});
   });
   $$('#hSess [data-rmqs]').forEach(b=>b.onclick=()=>{
     const n=b.dataset.rmqs,v=num($(`#hSess [data-rmq="${CSS.escape(n)}"]`).value);
@@ -1383,6 +1453,105 @@ $('#hFile').onchange=async e=>{
   e.target.value='';
 };
 
+/* ================= CHULETA: RELOJ, CALENDARIO, NOTAS ================= */
+function cheatLines(s){
+  const out=[];
+  s.blocks.forEach(b=>{
+    const bl=blockLetter(b),pre=bl.wu?'WU':bl.l;
+    const lifts=b.lines.filter(l=>l.kind==='lift');
+    lifts.forEach(ln=>{
+      const l=liftByName(ln.lift,false),rm=l&&l.rm,rep=`${ln.sets>1?ln.sets+'×':''}${ln.reps}`;
+      if(!rm){out.push(`${pre} · ${ln.lift} ${fmt(ln.a,0)}${ln.b?'-'+fmt(ln.b,0):''}% (${rep}) · sin RM`);return;}
+      const w1=roundW(rm*ln.a/100),w2=ln.b?roundW(rm*ln.b/100):null;
+      const r=S.settings.bar?platesFor(w2||w1):null,pl=r&&r.out.length?` [${r.out.map(x=>fmt(x)).join('+')}]`:'';
+      out.push(`${pre} · ${ln.lift} ${fmt(w1)}${w2?'-'+fmt(w2):''} kg (${rep})${pl}`);
+    });
+    if(!bl.wu&&!lifts.length){
+      const kg=b.lines.map(x=>x.t).join(' ').match(/\(\s*\d+(?:[.,]\d+)?\s*\/\s*\d+(?:[.,]\d+)?\s*\)/g);
+      out.push(`${pre} · ${bl.t}${b.meta.tc?` TC ${b.meta.tc}'`:''}${kg?' '+kg.join(' '):''}`);
+    }
+  });
+  return out;
+}
+function cheatText(s){return `${cap(dLong(s.date))}\n`+cheatLines(s).join('\n');}
+function watchSend(s){
+  const lines=cheatLines(s);if(!lines.length)return toast('No hay cargas que enviar');
+  $('#wName').textContent=S.settings.shortcut||'Cargas al reloj';
+  $('#wPrev').textContent=lines.join('\n');
+  if(S.ui.watchOk){openShortcut(lines);return;}
+  $('#wGo').onclick=()=>{S.ui.watchOk=true;save();$('#dlgWatch').close();openShortcut(lines);};
+  sheet('#dlgWatch');
+}
+function openShortcut(lines){
+  const name=S.settings.shortcut||'Cargas al reloj';
+  location.href=`shortcuts://run-shortcut?name=${encodeURIComponent(name)}&input=text&text=${encodeURIComponent(lines.join('\n'))}`;
+  setTimeout(()=>toast('Si no se abre Atajos, revisa el nombre del atajo en Ajustes'),2500);
+}
+function icsEsc(t){return t.replace(/\\/g,'\\\\').replace(/;/g,'\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');}
+async function calExport(s){
+  const d=s.date.replace(/-/g,''),nx=new Date(s.date+'T12:00');nx.setDate(nx.getDate()+1);const d2=isoD(nx).replace(/-/g,'');
+  const title='Box · '+s.blocks.filter(b=>!b.meta.wu).map(b=>blockLetter(b).t).join(' / ');
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Cargas//ES','BEGIN:VEVENT',`UID:${s.id}@cargas`,`DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').slice(0,15)}Z`,
+    `DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d2}`,`SUMMARY:${icsEsc(title)}`,`DESCRIPTION:${icsEsc(cheatLines(s).join('\n'))}`,'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const f=new File([ics],`box-${s.date}.ics`,{type:'text/calendar'});
+  try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title});return;}}catch(e){if(e.name==='AbortError')return;}
+  const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;a.click();
+}
+async function copyCheat(s){
+  const t=cheatText(s);
+  try{if(navigator.share){await navigator.share({text:t});return;}}catch(e){if(e.name==='AbortError')return;}
+  try{await navigator.clipboard.writeText(t);toast('Copiado: pégalo en Notas');}catch(e){toast('No se pudo copiar');}
+}
+
+/* ================= IMAGEN DE PR ================= */
+let prBlob=null,prName='';
+async function prImage(name,v,prev,date){
+  try{await Promise.all(['800 300px "Big Shoulders Display"','600 56px Onest','500 40px Onest'].map(f=>document.fonts.load(f)));}catch(e){}
+  const W=1080,H=1920,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  const BS='"Big Shoulders Display", Impact, sans-serif',ON='Onest, -apple-system, sans-serif';
+  g.fillStyle='#15181c';g.fillRect(0,0,W,H);
+  let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  for(let i=0;i<900;i++){g.fillStyle=`rgba(${rnd()<.08?'46,111,232':rnd()<.1?'244,196,48':'255,255,255'},${.03+rnd()*.06})`;g.beginPath();g.arc(rnd()*W,rnd()*H,.8+rnd()*2.2,0,7);g.fill();}
+  // cabecera
+  g.fillStyle='#e5383b';g.beginPath();g.arc(118,150,34,0,7);g.fill();g.fillStyle='#1d2127';g.beginPath();g.arc(118,150,13,0,7);g.fill();
+  g.fillStyle='#eef1f4';g.font=`800 64px ${BS}`;g.textBaseline='middle';g.fillText('Cargas',172,152);
+  g.fillStyle='#8e97a6';g.font=`500 36px ${ON}`;g.textAlign='right';g.fillText(cap(new Date(date).toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'})),W-84,152);g.textAlign='left';
+  // disco
+  const cx=W/2,cy=740,R=400;
+  g.save();g.shadowColor='rgba(0,0,0,.55)';g.shadowBlur=60;g.shadowOffsetY=30;g.fillStyle='#e5383b';g.beginPath();g.arc(cx,cy,R,0,7);g.fill();g.restore();
+  g.strokeStyle='rgba(0,0,0,.22)';g.lineWidth=10;g.beginPath();g.arc(cx,cy,R-14,0,7);g.stroke();
+  g.strokeStyle='rgba(255,255,255,.12)';g.lineWidth=4;g.beginPath();g.arc(cx,cy,R-110,0,7);g.stroke();
+  // texto en el borde
+  const rim=`NUEVO RM · ${name.toUpperCase()} · NUEVO RM · ${name.toUpperCase()} · `;g.font=`800 50px ${BS}`;g.fillStyle='rgba(255,255,255,.55)';
+  const rr=R-62;let ang=-Math.PI/2-0.9;
+  for(const ch of rim){const w=g.measureText(ch).width+7;const a=ang+w/2/rr;g.save();g.translate(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr);g.rotate(a+Math.PI/2);g.textAlign='center';g.fillText(ch,0,0);g.restore();ang+=w/rr;if(ang>Math.PI*1.5-0.95)break;}
+  // buje
+  g.fillStyle='#1d2127';g.beginPath();g.arc(cx,cy,175,0,7);g.fill();g.strokeStyle='#8e97a6';g.lineWidth=18;g.beginPath();g.arc(cx,cy,175,0,7);g.stroke();
+  g.fillStyle='#f4c430';g.textAlign='center';g.font=`800 150px ${BS}`;g.fillText('PR',cx,cy+6);
+  // peso
+  g.fillStyle='#eef1f4';g.font=`600 60px ${ON}`;g.fillText(name,cx,1255);
+  g.font=`800 340px ${BS}`;const ws=fmt(v);const tw=g.measureText(ws).width;g.font=`800 110px ${BS}`;const kw=g.measureText('kg').width;
+  const x0=cx-(tw+kw+20)/2;g.textAlign='left';g.font=`800 340px ${BS}`;g.fillText(ws,x0,1470);g.fillStyle='#8e97a6';g.font=`800 110px ${BS}`;g.fillText('kg',x0+tw+20,1540);
+  g.textAlign='center';
+  if(prev){g.fillStyle='#2db36a';g.font=`700 54px ${ON}`;g.fillText(`+${fmt(v-prev,1)} kg`,cx,1690);g.fillStyle='#8e97a6';g.font=`500 40px ${ON}`;g.fillText(`antes ${fmt(prev)} kg`,cx,1760);}
+  g.fillStyle='#5f6774';g.font=`500 32px ${ON}`;g.fillText('agusmltkd.github.io/crossfit',cx,1858);
+  return new Promise(r=>c.toBlob(r,'image/png'));
+}
+async function offerPr(name,v,prev,date){
+  prName=`pr-${name.toLowerCase().replace(/[^a-z0-9]+/g,'-')}-${fmt(v).replace(',','.')}kg.png`;
+  $('#prT').textContent=prev?'¡Nuevo RM!':'RM registrado';
+  $('#prS').textContent=`${name} · ${fmt(v)} kg${prev?` (+${fmt(v-prev,1)} kg)`:''}`;
+  $('#prImg').removeAttribute('src');sheet('#dlgPr');
+  prBlob=await prImage(name,v,prev,date||new Date().toISOString());
+  $('#prImg').src=URL.createObjectURL(prBlob);
+}
+$('#prShare').onclick=async()=>{
+  if(!prBlob)return;const f=new File([prBlob],prName,{type:'image/png'});
+  try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return;}}catch(e){if(e.name==='AbortError')return;}
+  $('#prSave').click();
+};
+$('#prSave').onclick=()=>{if(!prBlob)return;const a=document.createElement('a');a.href=URL.createObjectURL(prBlob);a.download=prName;a.click();toast('Imagen guardada');};
+
 /* ================= CABECERA CONTEXTUAL ================= */
 function setSub(){
   const s=sessOf(today());let t;
@@ -1482,16 +1651,17 @@ function renderStats(){
   h+=`<div class="card"><div class="ttl"><h2>Equilibrio de fuerza</h2><span class="mut">ratio entre tus RM</span></div>`+
     (ratios.length?ratios.map(r=>{const ok=Math.abs(r.v-r.ref)<=5;return `<div class="ratio"><div class="t"><span>${esc(r.lbl)}</span><b>${fmt(r.v,0)}%</b></div><div class="tr"><i style="width:${Math.min(100,r.v)}%"></i><u style="left:${r.ref}%"></u></div><div class="s">${ok?'En la referencia habitual':r.v<r.ref?`Por debajo de la referencia (~${r.ref}%): margen para mejorar el ${r.a.toLowerCase()}`:`Por encima de la referencia (~${r.ref}%): el ${r.b.toLowerCase()} puede subir`}</div></div>`;}).join('')+`<div class="mut" style="margin-top:8px">La línea amarilla marca la referencia orientativa más citada.</div>`
     :`<div class="mut">Añade RM de back squat y front squat, o de snatch y clean & jerk, para comparar.</div>`)+`</div>`;
-  h+=`<div class="card"><div class="ttl"><h2>Últimos RM</h2></div>`+(prl.length?prl.slice(0,5).map(p=>`<div class="prl"><div class="md">PR</div><div class="bd"><b>${esc(p.n)}</b><span>${dShort(p.d)}</span></div><div class="v">${fmt(p.v)} kg<small>+${fmt(p.diff,1)} kg</small></div></div>`).join(''):`<div class="mut">Cuando subas un RM aparecerá aquí.</div>`)+`</div>`;
+  h+=`<div class="card"><div class="ttl"><h2>Últimos RM</h2></div>`+(prl.length?prl.slice(0,5).map(p=>`<div class="prl"><div class="md">PR</div><div class="bd"><b>${esc(p.n)}</b><span>${dShort(p.d)}</span></div><div class="v">${fmt(p.v)} kg<small>+${fmt(p.diff,1)} kg</small></div><button class="shbtn" data-prs="${esc(p.n)}|${p.v}|${p.v-p.diff}|${p.d}" aria-label="Compartir"><svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button></div>`).join(''):`<div class="mut">Cuando subas un RM aparecerá aquí.</div>`)+`</div>`;
   $('#statsBody').innerHTML=h;
   $('#stPrev').onclick=()=>{statM.setMonth(statM.getMonth()-1);renderStats();};
   $('#stNext').onclick=()=>{statM.setMonth(statM.getMonth()+1);renderStats();};
+  $$('#statsBody [data-prs]').forEach(b=>b.onclick=()=>{const [n,v,pv,d]=b.dataset.prs.split('|');offerPr(n,+v,+pv,d);});
   $$('#statsBody [data-go]').forEach(b=>b.onclick=()=>{S.ui.day=b.dataset.go;hoyEdit=false;save();show('hoy');});
 }
 
 /* ================= AJUSTES ================= */
 function renderSet(){
-  const st=S.settings;$('#verTxt').textContent='v'+APP_VERSION;
+  const st=S.settings;$('#scName').value=st.shortcut||'';$('#scName').onchange=e=>{st.shortcut=e.target.value.trim();save();};$('#verTxt').textContent='v'+APP_VERSION;
   seg('#segBar',()=>st.bar,v=>{st.bar=+v;save();refresh();});
   seg('#segStep',()=>st.step,v=>{st.step=+v;save();refresh();});
   seg('#segMode',()=>st.mode,v=>{st.mode=v;save();refresh();});
